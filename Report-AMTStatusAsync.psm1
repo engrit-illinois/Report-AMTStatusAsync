@@ -49,13 +49,29 @@ function Report-AMTStatusAsync {
 		[string]$CMPSModulePath="$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1"
 	)
 	
-	function log {
+	function logAsync {
 		param (
 			[string]$msg,
 			[int]$l=0, # level (of indentation)
 			[int]$v=0, # verbosity level
 			[switch]$nots, # omit timestamp
 			[switch]$nnl # No newline after output
+		)
+		
+		if(-not $nots) { $nots = $false }
+		if(-not $nnl) { $nnl = $false }
+		
+		logNotAsync -msg $msg -l $l -v $v -nots:$nots -nnl:$nnl -async
+	}
+	
+	function log {
+		param (
+			[string]$msg,
+			[int]$l=0, # level (of indentation)
+			[int]$v=0, # verbosity level
+			[switch]$nots, # omit timestamp
+			[switch]$nnl, # No newline after output
+			[switch]$async
 		)
 		
 		if(!(Test-Path -PathType leaf -Path $LogPath)) {
@@ -78,7 +94,7 @@ function Report-AMTStatusAsync {
 				Write-Host $msg
 			}
 			
-			if(!$NoLog) {
+			if((-not $NoLog) -and (-not $async)) {
 				if($nnl) {
 					$msg | Out-File $LogPath -Append -NoNewline
 				}
@@ -688,11 +704,43 @@ function Report-AMTStatusAsync {
 			}
 			#>
 			
-			# New parallel loop
-			# Sacrifices ordered log output and percentage completion reporting
+			# New parallel loop hack
+			# Sacrifices logging, sane console output, and progress reporting
+			
+			$f_GetCompData = ${function:Get-CompData}.ToString()
+			$f_GetState = ${function:Get-State}.ToString()
+			$f_GetFW = ${function:Get-FW}.ToString()
+			$f_GetHW = ${function:Get-HW}.ToString()
+			$f_count = ${function:count}.ToString()
+			$f_log = ${function:log}.ToString()
+			$f_logAsync = ${function:logAsync}.ToString()
+			$f_LogError = ${function:Log-Error}.ToString()
+			
 			$compsData = $comps | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
 				$comp = $_
-				$compData = Get-CompData $comp $creds
+				
+				${function:Get-CompData} = $using:f_GetCompData
+				${function:Get-State} = $using:f_GetState
+				${function:Get-FW} = $using:f_GetFW
+				${function:Get-HW} = $using:f_GetHW
+				${function:count} = $using:f_count
+				${function:log} = $using:f_logAsync
+				${function:logNotAsync} = $using:f_log
+				${function:Log-Error} = $using:f_LogError
+				
+				$SkipPing = $using:SkipPing
+				$Pings = $using:Pings
+				$SkipFWVer = $using:SkipFWVer
+				$SkipModel = $using:SkipModel
+				$CredDelaySec = $using:CredDelaySec
+				$ForceBootIfOff = $using:ForceBootIfOff
+				$ForceBootIfHibernated = $using:ForceBootIfHibernated
+				$WakeIfStandby = $using:WakeIfStandby
+				$NoLog = $using:NoLog
+				$LogPath = $using:LogPath
+				$Verbosity = $using:Verbosity
+				
+				$compData = Get-CompData $comp $using:creds
 			}
 			
 			log "Done looping through computers." -v 2
