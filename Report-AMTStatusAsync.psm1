@@ -554,6 +554,9 @@ function Report-AMTStatusAsync {
 	}
 	
 	function Get-CompData($comp, $creds, $progress) {
+		
+		$started = Get-Date
+		
 		if($progress) {
 			log "Processing computer $progress`: `"$comp`"..." -l 1
 		}
@@ -661,6 +664,9 @@ function Report-AMTStatusAsync {
 			}
 		}
 		
+		$ended = Get-Date
+		$runtime = $ended - $started
+		
 		$compData = [PSCustomObject]@{
 			"ComputerName" = $comp
 			"Ponged" = $ponged
@@ -681,6 +687,7 @@ function Report-AMTStatusAsync {
 			"BootResult" = $bootResult
 			"Firmware" = $fwv
 			"WorkingCred" = ($state.workingCred + 1) # Translating from index to human speech
+			"Runtime" = $runtime
 		}
 		
 		log "Done processing computer: `"$comp`"." -l 1 -v 2
@@ -749,7 +756,7 @@ function Report-AMTStatusAsync {
 	}
 	
 	function Select-CompsData($compsData) {
-		$compsData | Select ComputerName,Ponged,KnownError,ErrorReason,WorkingCred,Firmware,PowerStateID,PowerStateDesc,ForceBooted,BootResult,Make,Model,Serial,BiosVer,BiosDate,MemAccess,MoboModel,MoboVer,MoboSerial | Sort ComputerName
+		$compsData | Select ComputerName,Ponged,KnownError,ErrorReason,WorkingCred,Firmware,PowerStateID,PowerStateDesc,ForceBooted,BootResult,Make,Model,Serial,BiosVer,BiosDate,MemAccess,MoboModel,MoboVer,MoboSerial,Runtime | Sort ComputerName
 	}
 	
 	function Export-CompsData($compsData) {
