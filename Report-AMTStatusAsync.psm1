@@ -740,7 +740,7 @@ function Report-AMTStatusAsync {
 				$LogPath = $using:LogPath
 				$Verbosity = $using:Verbosity
 				
-				$compData = Get-CompData $comp $using:creds
+				Get-CompData $comp $using:creds
 			}
 			
 			log "Done looping through computers." -v 2
@@ -774,6 +774,7 @@ function Report-AMTStatusAsync {
 	}
 	
 	function Do-Stuff {
+		$started = Get-Date
 		$creds = Get-Creds
 		if(@($creds).count -gt 0) {
 			$comps = Get-CompNames
@@ -782,6 +783,9 @@ function Report-AMTStatusAsync {
 			Export-CompsData $compsData
 			Print-CompsData $compsData
 		}
+		$ended = Get-Date
+		$runtime = $ended - $started
+		log "Runtime: $runtime"
 	}
 	
 	Do-Stuff
